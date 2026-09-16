@@ -43,3 +43,19 @@ tasks:
       - python3 extract_postgres_to_minio.py
       - python3 extract_weather_to_minio.py
       - python3 transform_duckdb.py
+
+# Orchestration for transformations with dbt
+  - id: run_dbt_transformations
+    type: io.kestra.plugin.scripts.shell.Commands
+    runner: PROCESS
+    commands:
+      # 1. Install dbt-duckdb inside the container
+      - pip3 install dbt-duckdb --target /tmp/pylibs --quiet --break-system-packages
+      # 2. Tell the container where to find the installed dbt commands
+      - export PYTHONPATH="/tmp/pylibs"
+      - export PATH="/tmp/pylibs/bin:$PATH"
+      # 3. Use the Docker container's internal path to your repository
+      - cd /app/warehouse/agri_climate_models
+      - export DBT_PROFILES_DIR=$(pwd)
+      # 4. Run the pipeline
+      - dbt build

@@ -53,6 +53,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ../ingestion:/app/ingestion
+      - ../warehouse:/app/warehouse   <-- Add this exact line!
     networks:
       - data_network
 
