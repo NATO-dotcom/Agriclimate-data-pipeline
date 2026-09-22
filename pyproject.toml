@@ -2,7 +2,7 @@
 name = "agri-climate-pipeline"
 version = "0.1.0"
 description = "My zero-cost local data pipeline"
-readme = "README.md"
+readme = "README.md" 
 requires-python = ">=3.10"
 dependencies = [
     "boto3>=1.43.93",
