@@ -2,7 +2,6 @@
 
 A **zero-cost, fully local** ELT data pipeline that ingests agricultural crop-yield data and historical climate data for **East Africa** (Kenya, Rwanda, Uganda, Tanzania), transforms it through a **Medallion Architecture** (Bronze → Silver → Gold), and produces an analytics-ready **Climate Impact Analysis** dataset — all orchestrated with **Kestra**.
 
-> **New in v2**: Apache Spark batch processing layer, Dockerized Spark jobs with MinIO upload, and scheduled Kestra orchestration for containerized Spark pipelines.
 
 ### Why ELT over ETL?
 
@@ -30,7 +29,6 @@ This separation ensures that each layer has a clear responsibility and that upst
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [What's New — Features Added](#whats-new--features-added)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -142,41 +140,6 @@ It does so by:
 | **Language**      | Python 3.14 (managed with `uv`)                                                               |
 | **Containerization** | Docker + Docker Compose                                                                    |
 | **IaC**           | Terraform (Google Cloud — GCS bucket + BigQuery dataset for optional cloud deployment)         |
-
----
-
-## What's New — Features Added
-
-The following features have been added beyond the initial Bronze ingestion pipeline:
-
-### 🔥 Apache Spark Batch Processing (`spark_jobs/`)
-- **`01_first_look.py`** — Strict schema enforcement with `StructType`, CSV-to-Parquet conversion with repartitioning for optimized parallel reads.
-- **`02_transform_join.py`** — Broadcast join between large Parquet yield data and a small CSV region lookup, wide aggregation (GroupBy + sum/count), and Gold-layer Parquet output with interactive Spark UI support.
-- **`03_minio_pipeline.py`** — End-to-end pipeline: reads local Parquet, performs broadcast join + aggregation, converts to Pandas for single-file output, and uploads the Gold-layer report to MinIO via native `boto3`.
-
-### 🐳 Dockerized Spark Execution
-- **`Dockerfile`** — Production-ready container image (`python:3.11-slim` + OpenJDK) that bundles PySpark, project dependencies (via `uv`), region lookup data, and the Spark-to-MinIO pipeline script.
-- Self-contained execution: `docker build` + `docker run` runs the full Spark pipeline with zero host-side dependencies.
-
-### ⏰ Spark Batch Orchestration (`orchestration/spark_batch_flow.yaml`)
-- **Kestra Docker plugin** (`io.kestra.plugin.docker.Run`) runs the containerized Spark job.
-- **Daily cron schedule** (`0 0 * * *`) for automated nightly batch processing.
-- Uses `networkMode: host` so the Spark container can reach the local MinIO instance.
-
-### 🔄 dbt Snapshots — Slowly Changing Dimensions (`warehouse/agri_climate_models/snapshots/`)
-- **`fields_snapshot.sql`** — Tracks historical changes to field metadata (e.g., `soil_type` changes) using dbt's `check` strategy with SCD Type 2 behavior.
-
-### 🧪 dbt Testing & Quality
-- **Schema tests**: `not_null` constraints on `region_id`, `harvest_year`, `total_rainfall_mm`.
-- **Singular test**: `assert_positive_metrics.sql` — validates that crop yields and rainfall values are never negative.
-
-### 🌱 dbt Seeds & Macros
-- **`crop_categories.csv`** — Static lookup table mapping crop types to categories (Cereal, Legume, Tuber) for enriched analytics.
-- **`convert_kg_to_tons` macro** — Reusable Jinja2 function for consistent unit conversion across all models.
-
-### 🎯 Full ELT Orchestration with Kestra
-- **`bronze_ingestion_flow.yml`** — Complete Kestra flow automating: DB seeding → Postgres extraction → Weather API ingestion → DuckDB Silver/Gold transforms → dbt build (staging + marts).
-- Docker volume mounts for `ingestion/` and `warehouse/` directories.
 
 ---
 
