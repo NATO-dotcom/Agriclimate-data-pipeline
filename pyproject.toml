@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.3.3",
     "psycopg2-binary>=2.9.13",
     "pyarrow>=25.0.1",
+    "pyspark==4.2.0",
     "requests>=2.34.2",
     "sqlalchemy>=2.0.52",
 ]
