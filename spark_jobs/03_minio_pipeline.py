@@ -1,6 +1,15 @@
+from pathlib import Path
 import boto3
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+
+# Dynamically find the project root regardless of where execution starts
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+
+YIELDS_PATH = str(PROJECT_ROOT / "spark_output" / "yields_parquet")
+REGIONS_PATH = str(PROJECT_ROOT / "region_lookup.csv")
+LOCAL_OUTPUT_PATH = str(PROJECT_ROOT / "spark_output" / "gold_yield_report.parquet")
 
 spark = SparkSession.builder \
     .master("local[*]") \
@@ -8,8 +17,8 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 print("Reading data from local disk...")
-yields_df = spark.read.parquet("../spark_output/yields_parquet")
-regions_df = spark.read.option("header", "true").csv("../region_lookup.csv")
+yields_df = spark.read.parquet(YIELDS_PATH)
+regions_df = spark.read.option("header", "true").csv(REGIONS_PATH)
 
 print("Joining and Aggregating...")
 joined_df = yields_df.join(F.broadcast(regions_df), "region_id", "left")
@@ -26,8 +35,7 @@ gold_df = final_report.toPandas()
 print(gold_df)
 
 print("Saving Gold data locally...")
-local_path = "../spark_output/gold_yield_report.parquet"
-gold_df.to_parquet(local_path)
+gold_df.to_parquet(LOCAL_OUTPUT_PATH)
 
 print("Uploading to MinIO via native boto3...")
 s3_client = boto3.client(
@@ -37,7 +45,6 @@ s3_client = boto3.client(
     aws_secret_access_key="minio_password"
 )
 
-
 try:
     s3_client.head_bucket(Bucket="agri-data")
     print("Bucket 'agri-data' already exists.")
@@ -45,8 +52,7 @@ except Exception:
     s3_client.create_bucket(Bucket="agri-data")
     print("Created missing bucket: 'agri-data'")
 
-# Upload the file
-s3_client.upload_file(local_path, "agri-data", "gold_yield_report.parquet")
+s3_client.upload_file(LOCAL_OUTPUT_PATH, "agri-data", "gold_yield_report.parquet")
 
 print("Success! Your Gold data is safely in MinIO.")
 spark.stop()
