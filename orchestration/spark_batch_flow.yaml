@@ -1,0 +1,14 @@
+id: agriclimate_spark_batch
+namespace: dev.dinah
+description: "Containerized PySpark batch job."
+
+tasks:
+  - id: run_spark_container
+    type: io.kestra.plugin.docker.Run
+    containerImage: agriclimate-spark:latest
+    networkMode: host
+
+triggers:
+  - id: daily_schedule
+    type: io.kestra.core.models.triggers.types.Schedule
+    cron: "0 0 * * *"
